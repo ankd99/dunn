@@ -1,0 +1,17 @@
+Ques3 ) Write puppet manifest, which should set OOM score of SSH daemon to -950 in
+`systemd` runtime environment.
+
+Ans 3)
+
+manual: Haven'd worked with puppet.
+
+1. first get pid of ssh daemon process from ps -elf | grep sshd
+2. cd /proc/{pid}/
+3. echo -950 > oom_score_adj
+4. systemcl daemon-reload
+5. to enable it on system reboot, edit vim
+/etc/systemd/system/sshd.service          - ubuntus
+/usr/lib/systemd/system/sshd.service  - centos
+
+[Service]
+OOMScoreAdjust=-950

@@ -1,0 +1,53 @@
+ques5) kubernetes task
+
+I) HPA - resource cpu based
+
+1. minikube start --memory 8192  (k8s cluster version 1.13.4)
+2. minikube addons list
+minikube addons enable metrics-server
+3. Deployed metrics server
+
+kubectl create -f metrics-server/
+
+#this will create api - metrics.k8s.io/v1beta1 - on k8s aggregator layer if not already present.
+check with below command:
+kubectl api-versions
+
+After this we can check if metrics is being collected or not - kubectl top pods/node
+
+4. kubectl create -f deployment.yml
+kubectl create -f web-service-ci.yml
+
+5. create hpa for resource metrics - basis of cpu
+
+kubectl create -f hpa-demo.yml
+
+hpa will querry metrics.k8.io api to check the desired cpu and scale accordingly.
+
+
+###################################################################################################
+
+II) Custom based HPA - http requests per pod
+
+1. After minikube is being started, we need to start custom metrics api instead of metrics.k8.io api.
+This we can do by deploying prometheus adapter. In case of resource metrics - cpu and memory, metrics server goes and scrapes
+metrics from different resources. In case of custom, prometheus scrapes metrics and adapter is there to write some custom logic.
+
+kubectl create -f k8s-prometheus-adapter/
+
+custom.metrics.k8s.io/v1beta1 - this becomes available.
+
+2. Deploy prometheus to gather metrics from all pods.
+
+kubectl create -f prometheus-minikube/
+
+3. Once prometheus is deployed and it start collecting metrics.
+http_requests_total metrics can be extracted.
+
+but to get requests served by per pod we can execute this querry :
+
+sum(rate(https_requests_total{namespace="default"}[5m]))
+
+4. Create hpa for custom metrics http_requests
+
+kubectl create -f hpa-custom.yml

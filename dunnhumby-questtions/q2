@@ -1,0 +1,9 @@
+ques2) How would you find the system load? If you have high load, does it mean that the CPU
+is completely busy? Why? / Why not?
+
+# system load can be checked with TOP command, by obsering load average. 
+Also htop command to check load on the individual cores of system.
+
+If we have 4 core machine, then load can go upto 4 and we can say system is running at the maximum i.e. 400%
+
+If load increases now, the new process will go to the queue.

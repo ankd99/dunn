@@ -1,0 +1,77 @@
+ques1) i) TCP: request_sock_TCP: Possible SYN flooding on port 80. Sending cookies.
+Check SNMP counters.
+ii) TCP: time wait bucket table overflow.
+iii) [93511.248912] Out of socket memory
+
+i) Reason: Application has high load with many frequent TCP connections made. Flood of traffic to the server leading to
+dropp of tcp connections.
+
+Resolution:
+1. First we need to determine if the traffic is valid or malicous to the server. This can be done by using any of the network
+monitoring tools - wireshark, tcpdump.
+2. If found malicous - block traffic via ip tables rule or via cloud provider firewall.
+how to determine this ? - check how much traffic was expected?, client ip addresses and their expected behaiour.
+
+If traffic is valid and huge and accepting application is accptin traffic slowly, though slowly.
+we can increase socket backlog(of underlying system) which is 128 by default.
+
+we faced a similar issue we increased backlog to 1024. we used strace command to see that it was only accepting 128 packets.
+
+sysctl -w net.core.somaxconn=1024
+to make changes permamnent - echo "net.core.somaxconn = 1024" >> /etc/sysctl.conf
+
+#confirm changes by viewing again
+sysctl net.core.somaxconn
+
+##################################################################################################################
+
+ii) # time wait bucket table overflow error - As per my understanding this error occurs due to increase in number of time wait connections.
+net.ipv4.tcp_tw_reuse - enable this
+
+TIME_WAIT - when a tcp conn closes, port doesnt gets closed immediately after, os has to wait for duration of timewait.
+
+The socket is waiting after close to handle packets still in the network. time wait tells us that this side connection has been closed.
+connection is still kept around so any delayed packets can be handled.
+
+solutions -
+
+a) We should use connection pooling. not to make a new connection on every request.
+
+b) increase port range
+echo 15000 65000 > /proc/sys/net/ipv4/ip_local_port_range
+
+c) Increase the availability by decreasing the FIN timeout.
+echo 30 > /proc/sys/net/ipv4/tcp_fin_timeout (default is 60)
+/etc/sysctl.conf - add here
+
+d) enable tcp_tw_reuse. set its value to 1
+/proc/sys/net/ipv4/tcp_tw_reuse
+
+tcp_tw_reuse - Allow to reuse TIME_WAIT sockets for new connections when it is safe from protocol viewpoint.
+
+####################################################################################################################
+
+iii) [93511.248912] Out of socket memory
+
+# how much memory the kernel is configured to dedicate to TCP run:
+cat /proc/sys/net/ipv4/tcp_mem
+
+when max no. of pages allowed for queuing connections by all tcp sockets exceed the max memory limit, kernel starts throwing
+"out of socket memory"
+
+# how much memory is being used by sockets in system at present:
+cat /proc/net/sockstat
+
+--
+other reason which may cause the above error " out of socket memory" can be because of no. of orphan socket.
+orphan sockets as well consume memory, precisely 64k.
+
+# command to check max no. of orphan sockets.
+cat /proc/sys/net/ipv4/tcp_max_orphans
+
+#command to check existing no. of orphan sockets present in the system.
+cat /proc/net/sockstat
+
+resolution - if existing orphan socket is more than max, we can simply increase max count in the file.
+
+I expect this issue to be interlinked with the TIME_wAIT issue. So we need to check on that too and probably enable tcp_tw_reuse.

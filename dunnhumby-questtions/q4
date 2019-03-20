@@ -1,0 +1,26 @@
+ques 4) Explain how would you configure `iptables` for server running following daemons on
+standard ports:
+NGINX should be available from everywhere
+SSH should be only available, from 10 static IPs (different subnets)
+
+Ans 4)
+ii) SSH should be only available, from 10 static IPs (different subnets)
+
+#1st we block all incoming connection on the ssh port
+iptables -A INPUT -i eth0 -p tcp -m tcp --dport 22 -j DROP
+
+#2nd allow those 10 IPs
+iptables -A INPUT -p tcp -m tcp -s ip1 --dport 22 -j ACCEPT
+iptables -A INPUT -p tcp -m tcp -s ip10 --dport 22 -j ACCEPT
+
+#3rd Save the iptables
+service iptables save
+
+#4th reload the iptables
+Service iptables reload
+
+i) NGINX should be available from everywhere
+
+iptables -A INPUT -i eth0 -p tcp --dport 80 -m conntrack --ctstate NEW,ESTABLISHED -j ACCEPT
+
+#Assumption - output policy is set as ACCEPT
